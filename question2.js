@@ -72,42 +72,107 @@ function loadObjects(){
     return Object.values(defects);
 }
 
-function query1(defects){
-    /* Your implementation here */
-    return /*...*/;    
+// how many status = resolved, resolution = fixed 
+function query1(defects){ // declarative, 8330
+    // filter out the resolved and resolution from defects, returns an array
+    const result = defects.filter(defect => defect.status === "RESOLVED" && defect.resolution === "FIXED"); 
+    return result.length; 
 }
 
-function query2(defects){
-    /* Your implementation here */
-    return /*...*/;    
+function query2(defects){  // declarative, 2681 
+    const result = defects.filter(defect => defect.summary.toLowerCase().includes("buildbot")); 
+    return result.length;    
 }
 
-function query3(defects){
-    /* Your implementation here */
-    return /*...*/;    
+function query3(defects){ //declarative, 7.73
+    const not_resolved = defects.filter(defect => defect.status != "RESOLVED"); 
+    return (not_resolved.length/defects.length) * 100;    
 }
 
-function query4(defects){
-    /* Your implementation here */
-    return /*...*/;    
+function query4(defects){ // GTK + UI
+    let count = {}; 
+    for (let d of defects) {
+        if (count[d.component]) {
+            count[d.component]++; 
+        } else {
+            count[d.component] = 1; 
+        }
+    }
+    
+    let max = 0; 
+    let component = "";
+    let c = 0; 
+    for (c in count) {
+        if (count[c] > max) {
+            max = count[c]; 
+            component = c; 
+        }
+    }
+    return component;    
 }
 
-function query5(defects){
-    /* Your implementation here */
-    return /*...*/;    
+function query5(defects){ // jeff.morriss.ws 
+    // return array of the ones that apply 
+    let total = defects.filter(defect => defect.status === "RESOLVED" && defect.resolution === "FIXED" && defect.component === "Documentation"); 
+    let count = {}; 
+    for (let d of total) {
+        if (count[d.fixed_by_username]) {
+            count[d.fixed_by_username]++; 
+        } else {
+            count[d.fixed_by_username] = 1; 
+        }
+    } 
+
+    let max = 0; 
+    let user = "";
+    let c = 0; 
+    for (c in count) {
+        if (count[c] > max || (count[c] === max && c < user)) { // have a tie break
+            max = count[c]; 
+            user = c; 
+        }
+    }
+    return user;   
 }
 
-function query6(defects){
-    /* Your implementation here */
-    return /*...*/;    
+function query6(defects){ // false 
+    // need a directed graph 
+    // example: bug A blocks bug B, bug B blocks bug C, and bug C blocks bug A
+    let defectMap = {}; 
+    for (let d of defects) {
+        defectMap[d.bug_id] = d.blocks; 
+    }
+    let visited = new Set(); 
+    for (let d of defects) {
+        let stack = new Set(); 
+        let visit = [d.bug_id]; // dfs
+        while (visit.length > 0) {
+            let curr = visit.pop(); 
+            if (stack.has(curr)) { // if in stack, cycle detected 
+                return true; 
+            } else {
+                stack.add(curr); 
+                visited.add(curr); 
+            }
+            if (defectMap[curr]) {
+                for (let b of defectMap[curr]) {
+                    if (!visited.has(b)) {
+                        visit.push(b); 
+                    }
+                }
+            } else {
+                stack.delete(curr); 
+            }
+        }
+        return false; 
+    }
 }
-
 
 let defects = loadObjects();
 
-query1(defects);
-query2(defects);
-query3(defects);
-query4(defects);
-query5(defects);
-query6(defects);
+console.log(query1(defects));
+console.log(query2(defects));
+console.log(query3(defects));
+console.log(query4(defects));
+console.log(query5(defects));
+console.log(query6(defects));
